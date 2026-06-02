@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from openai import OpenAI
 import os
 from dataclasses import dataclass
 
@@ -27,14 +28,6 @@ def transcribe(
     base_url: str | None = None,
     api_key: str | None = None,
 ) -> Transcription:
-    """Распознаёт речь через OpenAI-совместимый endpoint vLLM.
-
-    Whisper крутится на удалённом GPU-сервере (Docker + vLLM), сюда приходит
-    только результат. POST {base_url}/audio/transcriptions — тот же контракт,
-    что и у OpenAI. Запрашиваем verbose_json с посегментными таймкодами: они
-    нужны, чтобы в output.py выровнять текст со спикерами от pyannote.
-    """
-    from openai import OpenAI
 
     base_url = base_url or os.environ.get("VOICEAI_BASE_URL", "http://localhost:8000/v1")
     # vLLM не проверяет ключ, но клиент OpenAI требует непустую строку.

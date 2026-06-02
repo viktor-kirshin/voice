@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from .diarization import DiarizationResult, SpeakerTurn
-from .profanity import find_profanity
 from .transcribe import Segment, Transcription
 
 
@@ -33,7 +32,7 @@ def build_result(
     transcription: Transcription,
     diarization: DiarizationResult | None = None,
 ) -> dict:
-    """Структурированный результат (для JSON): сегменты со спикерами и матом."""
+    """Структурированный результат (для JSON): сегменты со спикерами."""
     turns = diarization.turns if diarization else []
     segments = []
     for seg in transcription.segments:
@@ -46,7 +45,6 @@ def build_result(
                 "end_ts": _ts(seg.end),
                 "speaker": speaker,
                 "text": seg.text,
-                "profanity": find_profanity(seg.text),
             }
         )
     return {
@@ -65,8 +63,7 @@ def build_text(
     lines: list[str] = []
     for s in build_result(transcription, diarization)["segments"]:
         prefix = f"{s['speaker']}: " if s["speaker"] else ""
-        mark = f"  [мат: {', '.join(s['profanity'])}]" if s["profanity"] else ""
-        lines.append(f"[{s['start_ts']} → {s['end_ts']}] {prefix}{s['text']}{mark}")
+        lines.append(f"[{s['start_ts']} → {s['end_ts']}] {prefix}{s['text']}")
     return "\n".join(lines)
 
 

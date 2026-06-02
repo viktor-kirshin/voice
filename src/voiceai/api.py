@@ -13,10 +13,6 @@ from .transcribe import transcribe
 
 app = FastAPI(
     title="voiceai",
-    description=(
-        "Транскрибация диалогов: Whisper на vLLM (OpenAI endpoint) + "
-        "диаризация спикеров pyannote + пометка нецензурной лексики."
-    ),
     version="0.1.0",
 )
 
@@ -38,14 +34,7 @@ def transcribe_endpoint(
     device: str = Form("auto", description="устройство диаризации: auto/cpu/cuda"),
     response_format: str = Form("json", description="формат ответа: json или txt"),
 ):
-    """Распознаёт речь (Whisper@vLLM) и размечает спикеров (pyannote).
-
-    Возвращает JSON со структурой сегментов либо готовый текст (`txt`).
-    Эндпоинт синхронный — FastAPI исполняет его в пуле потоков, поэтому
-    тяжёлая модель не блокирует event loop.
-    """
-    # Загрузку сохраняем во временный файл: и vLLM-клиент, и ffmpeg для
-    # диаризации работают с путём к файлу.
+    
     suffix = Path(file.filename or "audio").suffix or ".bin"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(file.file.read())
@@ -79,7 +68,6 @@ def transcribe_endpoint(
 
 
 def run() -> None:
-    """Точка входа `voiceai`: поднимает HTTP-сервер uvicorn."""
     import uvicorn
 
     uvicorn.run(
