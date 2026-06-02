@@ -1,0 +1,23 @@
+[00:00:00.00 → 00:00:09.78] SPEAKER_01: Unit 1. Reading. Families. They aren't all the same.
+[00:00:09.78 → 00:00:16.14] SPEAKER_01: John, Simon and Luke are from different places in the UK.
+[00:00:16.14 → 00:00:19.86] SPEAKER_01: Read about them and their families.
+[00:00:19.86 → 00:00:24.30] SPEAKER_00: Hi, I'm John and I'm from Scotland.
+[00:00:24.30 → 00:00:27.02] SPEAKER_00: I've got a small family.
+[00:00:27.02 → 00:00:31.22] SPEAKER_00: I live in a house with my dad and my sister Sally.
+[00:00:31.22 → 00:00:36.06] SPEAKER_00: Sally and I have got the same birthday. We're twins.
+[00:00:36.06 → 00:00:43.46] SPEAKER_00: My hair is brown and Sally's hair is black, but we've both got blue eyes.
+[00:00:43.46 → 00:00:47.94] SPEAKER_00: My dad works in his shop and we sometimes help him.
+[00:00:47.94 → 00:00:53.30] SPEAKER_00: But at the weekend, I always go out with my friend Nick.
+[00:00:53.30 → 00:00:56.02] SPEAKER_01: Hi, I'm Simon.
+[00:00:56.02 → 00:00:58.78] SPEAKER_01: There are six people in my family.
+[00:00:58.78 → 00:01:05.98] SPEAKER_01: My mum and dad, my brother, my grandparents and I live together in a house in Wales.
+[00:01:05.98 → 00:01:09.22] SPEAKER_01: My brother is just six months old.
+[00:01:09.22 → 00:01:11.90] SPEAKER_01: My parents are both teachers.
+[00:01:11.90 → 00:01:17.90] SPEAKER_01: My grandparents look after my brother and I help my parents in the house.
+[00:01:17.90 → 00:01:20.30] SPEAKER_01: Hello, my name is Luke.
+[00:01:20.30 → 00:01:23.70] SPEAKER_01: I'm from Ireland and I'm 15 years old.
+[00:01:23.70 → 00:01:27.82] SPEAKER_01: I haven't got a brother or a sister, but I've got a best friend.
+[00:01:27.86 → 00:01:31.26] SPEAKER_01: His name is Lee and he lives in my street.
+[00:01:31.26 → 00:01:34.66] SPEAKER_01: Lee's got a big family and a big house.
+[00:01:34.66 → 00:01:36.90] SPEAKER_01: I help Lee with his homework.
+[00:01:36.90 → 00:01:39.90] SPEAKER_01: I'm happy that I've got a best friend like Lee.

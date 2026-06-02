@@ -1,0 +1,24 @@
+[project]
+name = "dir1"
+version = "0.1.0"
+description = "Транскрибация диалогов: Whisper + диаризация спикеров + детект мата"
+readme = "README.md"
+authors = [
+    { name = "viktor-kirshin", email = "kmbmetcom2005@bk.ru" }
+]
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "faster-whisper>=1.0.3",
+    "pyannote.audio>=4.0",
+]
+
+[project.scripts]
+voiceai = "voiceai.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.10.11,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "voiceai"
+module-root = "src"
