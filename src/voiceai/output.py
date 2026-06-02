@@ -29,21 +29,44 @@ def _assign_speaker(seg: Segment, turns: list[SpeakerTurn]) -> str | None:
     return best_speaker
 
 
+def build_result(
+    transcription: Transcription,
+    diarization: DiarizationResult | None = None,
+) -> dict:
+    """Структурированный результат (для JSON): сегменты со спикерами и матом."""
+    turns = diarization.turns if diarization else []
+    segments = []
+    for seg in transcription.segments:
+        speaker = _assign_speaker(seg, turns) if turns else None
+        segments.append(
+            {
+                "start": round(seg.start, 2),
+                "end": round(seg.end, 2),
+                "start_ts": _ts(seg.start),
+                "end_ts": _ts(seg.end),
+                "speaker": speaker,
+                "text": seg.text,
+                "profanity": find_profanity(seg.text),
+            }
+        )
+    return {
+        "language": transcription.language,
+        "duration": round(transcription.duration, 2),
+        "speakers": diarization.speakers if diarization else [],
+        "segments": segments,
+    }
+
+
 def build_text(
     transcription: Transcription,
     diarization: DiarizationResult | None = None,
 ) -> str:
     """Собирает читаемую расшифровку. Если передана диаризация — с спикерами."""
-    turns = diarization.turns if diarization else []
     lines: list[str] = []
-    for seg in transcription.segments:
-        speaker = _assign_speaker(seg, turns) if turns else None
-        prefix = f"{speaker}: " if speaker else ""
-
-        profanity = find_profanity(seg.text)
-        mark = f"  [мат: {', '.join(profanity)}]" if profanity else ""
-
-        lines.append(f"[{_ts(seg.start)} → {_ts(seg.end)}] {prefix}{seg.text}{mark}")
+    for s in build_result(transcription, diarization)["segments"]:
+        prefix = f"{s['speaker']}: " if s["speaker"] else ""
+        mark = f"  [мат: {', '.join(s['profanity'])}]" if s["profanity"] else ""
+        lines.append(f"[{s['start_ts']} → {s['end_ts']}] {prefix}{s['text']}{mark}")
     return "\n".join(lines)
 
 

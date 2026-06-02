@@ -2,7 +2,7 @@
 
 Здесь поднимается отдельный сервис: модель **Whisper** крутится внутри
 **vLLM** в Docker-контейнере и отдаёт **OpenAI-совместимый HTTP API**.
-Клиент `voiceai` обращается к нему по сети (`--base-url`), а диаризацию
+Сервис `voiceai` обращается к нему по сети (поле `base_url`), а диаризацию
 (pyannote) и склейку делает у себя.
 
 ```
@@ -42,25 +42,25 @@ curl http://localhost:8000/v1/audio/transcriptions \
   -F 'timestamp_granularities[]=segment'
 ```
 
-## Подключение клиента
+## Подключение из сервиса voiceai
+
+FastAPI-сервис `voiceai` обращается к этому endpoint при обработке `/transcribe`.
+Адрес vLLM передаётся в поле `base_url` (или переменной `VOICEAI_BASE_URL`):
 
 ```bash
-# если сервер на этой же машине (base-url по умолчанию http://localhost:8000/v1)
-uv run voiceai transcribe call.mp3 \
-    --model openai/whisper-large-v3
+# сервер vLLM на этой же машине (base_url по умолчанию http://localhost:8000/v1)
+curl -X POST http://localhost:8080/transcribe -F file=@../test.mp3
 
-# если сервер на другом хосте
-uv run voiceai transcribe call.mp3 \
-    --base-url http://GPU_HOST:8000/v1 \
-    --model openai/whisper-large-v3
+# vLLM на другом хосте
+curl -X POST http://localhost:8080/transcribe \
+    -F file=@../test.mp3 \
+    -F base_url=http://GPU_HOST:8000/v1
 ```
-
-`--base-url` можно задать и переменной окружения `VOICEAI_BASE_URL`.
 
 ## Заметки
 
-- vLLM не проверяет API-ключ; клиент шлёт `EMPTY` по умолчанию. Если перед
-  vLLM стоит прокси с авторизацией — задайте `--api-key` или `OPENAI_API_KEY`.
+- vLLM не проверяет API-ключ; сервис шлёт `EMPTY` по умолчанию. Если перед
+  vLLM стоит прокси с авторизацией — задайте поле `api_key` или `OPENAI_API_KEY`.
 - Для выравнивания со спикерами нужен `verbose_json` с посегментными
   таймкодами (`timestamp_granularities=[segment]`). Клиент запрашивает их сам;
   убедитесь, что версия vLLM их поддерживает.

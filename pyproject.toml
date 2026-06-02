@@ -1,19 +1,22 @@
 [project]
 name = "dir1"
 version = "0.1.0"
-description = "Транскрибация диалогов: Whisper + диаризация спикеров + детект мата"
+description = "FastAPI-сервис транскрибации диалогов: Whisper (vLLM) + диаризация спикеров + детект мата"
 readme = "README.md"
 authors = [
     { name = "viktor-kirshin", email = "kmbmetcom2005@bk.ru" }
 ]
 requires-python = ">=3.13,<3.14"
 dependencies = [
+    "fastapi>=0.136.3",
     "openai>=2.40.0",
     "pyannote.audio>=4.0",
+    "python-multipart>=0.0.30",
+    "uvicorn[standard]>=0.48.0",
 ]
 
 [project.scripts]
-voiceai = "voiceai.cli:main"
+voiceai = "voiceai.api:run"
 
 [build-system]
 requires = ["uv_build>=0.10.11,<0.11.0"]
