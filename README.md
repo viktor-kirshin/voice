@@ -51,13 +51,54 @@ audio ──► Whisper ──► сегменты [start, end, text]  ┐
 pyannote требует токен HuggingFace (модель gated): нужно один раз принять
 условия модели на сайте и авторизоваться (см. [Настройка](#настройка)).
 
+## Два режима запуска Whisper
+
+Распознавание можно выполнять двумя способами — это выбирается флагом `--backend`:
+
+- **`local`** (по умолчанию) — `faster-whisper` работает в том же процессе.
+  Просто, без инфраструктуры, но на CPU большие модели медленные.
+- **`vllm`** — Whisper вынесен на **GPU-сервер в Docker-контейнер с vLLM**,
+  который поднимает **OpenAI-совместимый endpoint** (`/v1/audio/transcriptions`).
+  Клиент `voiceai` шлёт туда аудио по HTTP, а диаризацию (pyannote) и склейку
+  делает локально.
+
+```
+┌───────────────────────────┐    HTTP, OpenAI API     ┌──────────────────────────────┐
+│  клиент voiceai (CPU/Mac) │ ─ POST /v1/audio/... ──► │  Docker: vLLM + Whisper (GPU) │
+│  • pyannote (диаризация)  │ ◄─ verbose_json: segments│  • openai/whisper-large-v3    │
+│  • выравнивание + вывод    │                          │  • endpoint :8000/v1          │
+└───────────────────────────┘                          └──────────────────────────────┘
+```
+
+Зачем так: тяжёлую модель держим на одной GPU-машине и переиспользуем её как
+сервис; клиент остаётся лёгким. vLLM даёт батчинг и высокую пропускную
+способность, а OpenAI-контракт — стандартный интерфейс. Поднимается одной
+командой `docker compose`, подробности — в [docker/README.md](docker/README.md).
+
+```bash
+# 1) на GPU-сервере поднять Whisper в vLLM
+HF_TOKEN=hf_xxx docker compose -f docker/docker-compose.yml up -d
+
+# 2) с клиента обращаться к нему
+uv run voiceai transcribe call.mp3 \
+    --backend vllm \
+    --base-url http://GPU_HOST:8000/v1 \
+    --model openai/whisper-large-v3
+```
+
+Для выравнивания со спикерами клиент запрашивает `verbose_json` с посегментными
+таймкодами — vLLM возвращает сегменты `start/end/text`, как и облачный OpenAI.
+
 ## Стек
 
 - **Python 3.13** (требуется `>=3.13,<3.14`)
 - **uv** — управление окружением и зависимостями (проект уже инициализирован)
-- `faster-whisper` — распознавание речи (реализация Whisper на CTranslate2)
+- `faster-whisper` — распознавание речи локально (Whisper на CTranslate2)
 - `pyannote.audio` (>=4.0) — диаризация спикеров (нужен токен HuggingFace)
+- `openai` — клиент к OpenAI-совместимому endpoint (режим `--backend vllm`)
 - `ffmpeg` — декодирование аудиоформатов (системная зависимость)
+- **vLLM в Docker** — опционально, для выноса Whisper на GPU-сервер
+  (см. [docker/README.md](docker/README.md))
 
 ## Установка
 
@@ -101,9 +142,12 @@ uv run voiceai transcribe dialog.wav \
 
 | Флаг | Описание | По умолчанию |
 |---|---|---|
-| `--model` | размер Whisper: `tiny`/`base`/`small`/`medium`/`large-v3` | `small` |
+| `--backend` | `local` (faster-whisper) или `vllm` (удалённый endpoint) | `local` |
+| `--model` | local: размер Whisper (`small`/`large-v3`); vllm: id модели (`openai/whisper-large-v3`) | `small` |
+| `--base-url` | URL OpenAI-совместимого endpoint (для `--backend vllm`) | `http://localhost:8000/v1` |
+| `--api-key` | ключ для endpoint (vLLM игнорирует) | `EMPTY` |
 | `--language` | код языка (`ru`, `en`, ...) или `auto` | `auto` |
-| `--device` | `cpu` / `cuda` / `auto` | `auto` |
+| `--device` | `cpu` / `cuda` / `auto` (для `local`) | `auto` |
 | `--output` | путь к выходному `.txt` | рядом с исходником |
 
 ## Формат вывода
@@ -124,10 +168,13 @@ dir1/
 ├── README.md
 ├── pyproject.toml      # пакет voiceai, зависимости, entrypoint voiceai
 ├── uv.lock
+├── docker/
+│   ├── docker-compose.yml  # vLLM + Whisper, OpenAI-совместимый endpoint
+│   └── README.md           # как поднять GPU-сервер и подключить клиент
 └── src/voiceai/
     ├── __init__.py     # версия пакета
     ├── cli.py          # разбор аргументов, точка входа (voiceai transcribe)
-    ├── transcribe.py   # Whisper (faster-whisper): Segment / Transcription
+    ├── transcribe.py   # Whisper: local (faster-whisper) и vllm (OpenAI API)
     ├── diarization.py  # pyannote.audio: SpeakerTurn / DiarizationResult
     ├── profanity.py    # детект нецензурной лексики по словарю корней
     └── output.py       # выравнивание спикеров с текстом и запись .txt
@@ -144,6 +191,8 @@ dir1/
 - ✅ Диаризация спикеров через pyannote и привязка текста к спикеру
 - ✅ Пометка нецензурной лексики (словарь корней, RU + EN)
 - ✅ CLI `voiceai transcribe`, вывод в `.txt`
+- ✅ Два backend'а Whisper: локальный (`faster-whisper`) и удалённый vLLM
+  (OpenAI-совместимый endpoint в Docker)
 
 Пока не реализовано (есть в ТЗ):
 
