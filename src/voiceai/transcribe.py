@@ -22,76 +22,17 @@ class Transcription:
 
 def transcribe(
     audio_path: str,
-    model_size: str = "small",
-    language: str | None = None,
-    device: str = "auto",
-    backend: str = "local",
-    base_url: str | None = None,
-    api_key: str | None = None,
-) -> Transcription:
-    """Распознаёт речь в аудио.
-
-    backend="local" — faster-whisper в этом же процессе.
-    backend="vllm"  — обращение к OpenAI-совместимому endpoint (vLLM в Docker),
-                      модель Whisper крутится на удалённом GPU-сервере.
-    """
-    if backend == "vllm" or base_url:
-        return _transcribe_remote(
-            audio_path,
-            model=model_size,
-            language=language,
-            base_url=base_url,
-            api_key=api_key,
-        )
-    return _transcribe_local(
-        audio_path,
-        model_size=model_size,
-        language=language,
-        device=device,
-    )
-
-
-def _transcribe_local(
-    audio_path: str,
-    model_size: str = "small",
-    language: str | None = None,
-    device: str = "auto",
-) -> Transcription:
-    from faster_whisper import WhisperModel
-
-    compute_type = "float16" if device == "cuda" else "int8"
-    model = WhisperModel(model_size, device=device, compute_type=compute_type)
-
-    segments_iter, info = model.transcribe(
-        audio_path,
-        language=language,
-        vad_filter=True,  # отсекаем тишину, чтобы модель не «выдумывала» текст
-    )
-
-    segments = [
-        Segment(start=seg.start, end=seg.end, text=seg.text.strip())
-        for seg in segments_iter
-    ]
-
-    return Transcription(
-        language=info.language,
-        duration=info.duration,
-        segments=segments,
-    )
-
-
-def _transcribe_remote(
-    audio_path: str,
     model: str = "openai/whisper-large-v3",
     language: str | None = None,
     base_url: str | None = None,
     api_key: str | None = None,
 ) -> Transcription:
-    """Транскрибация через OpenAI-совместимый endpoint vLLM.
+    """Распознаёт речь через OpenAI-совместимый endpoint vLLM.
 
-    POST {base_url}/audio/transcriptions — тот же контракт, что и у OpenAI.
-    Запрашиваем verbose_json с посегментными таймкодами: они нужны, чтобы
-    в output.py выровнять текст со спикерами от pyannote.
+    Whisper крутится на удалённом GPU-сервере (Docker + vLLM), сюда приходит
+    только результат. POST {base_url}/audio/transcriptions — тот же контракт,
+    что и у OpenAI. Запрашиваем verbose_json с посегментными таймкодами: они
+    нужны, чтобы в output.py выровнять текст со спикерами от pyannote.
     """
     from openai import OpenAI
 

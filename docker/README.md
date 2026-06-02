@@ -2,7 +2,7 @@
 
 Здесь поднимается отдельный сервис: модель **Whisper** крутится внутри
 **vLLM** в Docker-контейнере и отдаёт **OpenAI-совместимый HTTP API**.
-Клиент `voiceai` обращается к нему через `--backend vllm`, а диаризацию
+Клиент `voiceai` обращается к нему по сети (`--base-url`), а диаризацию
 (pyannote) и склейку делает у себя.
 
 ```
@@ -45,14 +45,12 @@ curl http://localhost:8000/v1/audio/transcriptions \
 ## Подключение клиента
 
 ```bash
-# если сервер на этой же машине
+# если сервер на этой же машине (base-url по умолчанию http://localhost:8000/v1)
 uv run voiceai transcribe call.mp3 \
-    --backend vllm \
     --model openai/whisper-large-v3
 
 # если сервер на другом хосте
 uv run voiceai transcribe call.mp3 \
-    --backend vllm \
     --base-url http://GPU_HOST:8000/v1 \
     --model openai/whisper-large-v3
 ```

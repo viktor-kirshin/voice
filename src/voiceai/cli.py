@@ -13,17 +13,14 @@ def main(argv: list[str] | None = None) -> int:
 
     t = sub.add_parser("transcribe", help="расшифровать аудиофайл в текст")
     t.add_argument("audio", help="путь к аудиофайлу")
-    t.add_argument("--model", default="small",
-                   help="local: размер Whisper (small/large-v3); "
-                        "vllm: id модели (openai/whisper-large-v3)")
+    t.add_argument("--model", default="openai/whisper-large-v3",
+                   help="id модели Whisper на vLLM-сервере")
     t.add_argument("--language", default=None, help="код языка (ru/en/...) или auto")
-    t.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
+    t.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"],
+                   help="устройство для диаризации pyannote")
     t.add_argument("--output", default=None, help="путь к выходному .txt")
-    t.add_argument("--backend", default="local", choices=["local", "vllm"],
-                   help="local — faster-whisper в процессе; "
-                        "vllm — удалённый OpenAI-совместимый endpoint")
     t.add_argument("--base-url", default=None,
-                   help="URL OpenAI-совместимого endpoint (для --backend vllm), "
+                   help="URL OpenAI-совместимого endpoint vLLM, "
                         "напр. http://localhost:8000/v1")
     t.add_argument("--api-key", default=None,
                    help="ключ для endpoint (vLLM игнорирует; по умолчанию EMPTY)")
@@ -39,10 +36,8 @@ def main(argv: list[str] | None = None) -> int:
 
     result = transcribe(
         str(audio),
-        model_size=args.model,
+        model=args.model,
         language=language,
-        device=args.device,
-        backend=args.backend,
         base_url=args.base_url,
         api_key=args.api_key,
     )
