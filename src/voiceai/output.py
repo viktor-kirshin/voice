@@ -31,12 +31,17 @@ def _assign_speaker(seg: Segment, turns: list[SpeakerTurn]) -> str | None:
 def build_result(
     transcription: Transcription,
     diarization: DiarizationResult | None = None,
+    emotions: list[str | None] | None = None,
 ) -> dict:
-    """Структурированный результат (для JSON): сегменты со спикерами."""
+    """Структурированный результат (для JSON): сегменты со спикерами и эмоциями.
+
+    `emotions` — список меток, выровненный по `transcription.segments`.
+    """
     turns = diarization.turns if diarization else []
     segments = []
-    for seg in transcription.segments:
+    for i, seg in enumerate(transcription.segments):
         speaker = _assign_speaker(seg, turns) if turns else None
+        emotion = emotions[i] if emotions and i < len(emotions) else None
         segments.append(
             {
                 "start": round(seg.start, 2),
@@ -44,6 +49,7 @@ def build_result(
                 "start_ts": _ts(seg.start),
                 "end_ts": _ts(seg.end),
                 "speaker": speaker,
+                "emotion": emotion,
                 "text": seg.text,
             }
         )
@@ -58,12 +64,14 @@ def build_result(
 def build_text(
     transcription: Transcription,
     diarization: DiarizationResult | None = None,
+    emotions: list[str | None] | None = None,
 ) -> str:
     """Собирает читаемую расшифровку. Если передана диаризация — с спикерами."""
     lines: list[str] = []
-    for s in build_result(transcription, diarization)["segments"]:
+    for s in build_result(transcription, diarization, emotions)["segments"]:
         prefix = f"{s['speaker']}: " if s["speaker"] else ""
-        lines.append(f"[{s['start_ts']} → {s['end_ts']}] {prefix}{s['text']}")
+        emo = f"  ({s['emotion']})" if s["emotion"] else ""
+        lines.append(f"[{s['start_ts']} → {s['end_ts']}] {prefix}{s['text']}{emo}")
     return "\n".join(lines)
 
 
@@ -71,8 +79,11 @@ def write_txt(
     transcription: Transcription,
     path: str | Path,
     diarization: DiarizationResult | None = None,
+    emotions: list[str | None] | None = None,
 ) -> Path:
     """Записывает расшифровку в .txt и возвращает путь к файлу."""
     path = Path(path)
-    path.write_text(build_text(transcription, diarization), encoding="utf-8")
+    path.write_text(
+        build_text(transcription, diarization, emotions), encoding="utf-8"
+    )
     return path

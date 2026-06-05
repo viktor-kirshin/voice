@@ -8,6 +8,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import PlainTextResponse
 
 from .diarization import diarize
+from .emotion import classify_segments
 from .output import build_result, build_text
 from .transcribe import transcribe
 
@@ -26,7 +27,8 @@ def transcribe_endpoint(
     file: UploadFile = File(..., description="аудиофайл с записью разговора"),
     base_url: str | None = Form(None, description="URL OpenAI-совместимого endpoint vLLM"),
     num_speakers: int = Form(2, description="ожидаемое число спикеров"),
-    device: str = Form("auto", description="устройство диаризации: auto/cpu/cuda"),
+    device: str = Form("auto", description="устройство диаризации/эмоций: auto/cpu/cuda"),
+    detect_emotions: bool = Form(True, description="определять эмоции по сегментам"),
     response_format: str = Form("json", description="формат ответа: json или txt"),
 ):
 
@@ -52,9 +54,17 @@ def transcribe_endpoint(
                 detail=f"Ошибка диаризации ({type(e).__name__}): {e}",
             ) from e
 
+        # Эмоции необязательны: при сбое не валим весь запрос, просто без них.
+        emotions = None
+        if detect_emotions:
+            try:
+                emotions = classify_segments(tmp_path, result.segments, device=device)
+            except Exception:
+                emotions = None
+
         if response_format == "txt":
-            return PlainTextResponse(build_text(result, diarization))
-        return build_result(result, diarization)
+            return PlainTextResponse(build_text(result, diarization, emotions))
+        return build_result(result, diarization, emotions)
     finally:
         os.unlink(tmp_path)
 
