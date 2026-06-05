@@ -4,10 +4,9 @@ from openai import OpenAI
 import os
 from dataclasses import dataclass
 
-
 @dataclass
 class Segment:
-    """Один распознанный фрагмент речи."""
+
 
     start: float  # время начала, сек
     end: float    # время конца, сек
@@ -54,7 +53,7 @@ def transcribe(
         for s in raw_segments
     ]
 
-    # Если сервер вернул только текст без сегментов — кладём одной репликой.
+
     if not segments and getattr(resp, "text", None):
         segments = [Segment(start=0.0, end=0.0, text=resp.text.strip())]
 

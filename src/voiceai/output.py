@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from .diarization import DiarizationResult, SpeakerTurn
 from .transcribe import Segment, Transcription
 
@@ -33,10 +31,7 @@ def build_result(
     diarization: DiarizationResult | None = None,
     emotions: list[str | None] | None = None,
 ) -> dict:
-    """Структурированный результат (для JSON): сегменты со спикерами и эмоциями.
 
-    `emotions` — список меток, выровненный по `transcription.segments`.
-    """
     turns = diarization.turns if diarization else []
     segments = []
     for i, seg in enumerate(transcription.segments):
@@ -66,24 +61,10 @@ def build_text(
     diarization: DiarizationResult | None = None,
     emotions: list[str | None] | None = None,
 ) -> str:
-    """Собирает читаемую расшифровку. Если передана диаризация — с спикерами."""
+
     lines: list[str] = []
     for s in build_result(transcription, diarization, emotions)["segments"]:
         prefix = f"{s['speaker']}: " if s["speaker"] else ""
         emo = f"  ({s['emotion']})" if s["emotion"] else ""
         lines.append(f"[{s['start_ts']} → {s['end_ts']}] {prefix}{s['text']}{emo}")
     return "\n".join(lines)
-
-
-def write_txt(
-    transcription: Transcription,
-    path: str | Path,
-    diarization: DiarizationResult | None = None,
-    emotions: list[str | None] | None = None,
-) -> Path:
-    """Записывает расшифровку в .txt и возвращает путь к файлу."""
-    path = Path(path)
-    path.write_text(
-        build_text(transcription, diarization, emotions), encoding="utf-8"
-    )
-    return path

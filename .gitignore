@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# ONNX-артефакты экспорта (большие, генерируются скриптом)
+deploy/triton/model_repository/*/1/*.onnx
+
+# macOS
+.DS_Store

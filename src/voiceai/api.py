@@ -2,41 +2,61 @@ from __future__ import annotations
 
 import os
 import tempfile
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+import uvicorn
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import PlainTextResponse, RedirectResponse
 
-from .diarization import diarize
+from .audio import load_waveform
+from .diarization import load_pipeline, run_diarization
 from .emotion import classify_segments
 from .output import build_result, build_text
 from .transcribe import transcribe
 
+_diarization_lock = threading.Lock()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+
+    device = os.environ.get("VOICEAI_DEVICE", "auto")
+    app.state.diarization_pipeline = load_pipeline(device=device)
+    yield
+    app.state.diarization_pipeline = None
+
+
 app = FastAPI(
     title="voiceai",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 @app.get("/", include_in_schema=False)
 def root() -> RedirectResponse:
-    """Корень → интерактивная документация (Swagger UI)."""
+
     return RedirectResponse(url="/docs")
 
 
 @app.get("/health")
 def health() -> dict:
-    """Проверка живости сервиса."""
+
     return {"status": "ok"}
 
 @app.post("/transcribe")
 def transcribe_endpoint(
+    request: Request,
     file: UploadFile = File(..., description="аудиофайл с записью разговора"),
     base_url: str | None = Form(None, description="URL OpenAI-совместимого endpoint vLLM"),
     num_speakers: int = Form(2, description="ожидаемое число спикеров"),
-    device: str = Form("auto", description="устройство диаризации/эмоций: auto/cpu/cuda"),
     detect_emotions: bool = Form(True, description="определять эмоции по сегментам"),
     response_format: str = Form("json", description="формат ответа: json или txt"),
 ):
+    if response_format not in ("json", "txt"):
+        raise HTTPException(
+            status_code=422, detail="response_format должен быть 'json' или 'txt'"
+        )
 
     suffix = Path(file.filename or "audio").suffix or ".bin"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -53,18 +73,27 @@ def transcribe_endpoint(
             ) from e
 
         try:
-            diarization = diarize(tmp_path, num_speakers=num_speakers, device=device)
+            # декодируем аудио один раз и переиспользуем для диаризации и эмоций
+            waveform, sr = load_waveform(tmp_path)
+            # пайплайн pyannote прогрет на старте (lifespan) — переиспользуем
+            with _diarization_lock:
+                diarization = run_diarization(
+                    request.app.state.diarization_pipeline,
+                    waveform,
+                    sr,
+                    num_speakers=num_speakers,
+                )
         except Exception as e:
             raise HTTPException(
                 status_code=500,
                 detail=f"Ошибка диаризации ({type(e).__name__}): {e}",
             ) from e
 
-        # Эмоции необязательны: при сбое не валим весь запрос, просто без них.
+
         emotions = None
         if detect_emotions:
             try:
-                emotions = classify_segments(tmp_path, result.segments, device=device)
+                emotions = classify_segments(waveform, sr, result.segments)
             except Exception:
                 emotions = None
 
@@ -75,8 +104,6 @@ def transcribe_endpoint(
         os.unlink(tmp_path)
 
 def run() -> None:
-    import uvicorn
-
     uvicorn.run(
         "voiceai.api:app",
         host=os.environ.get("VOICEAI_HOST", "0.0.0.0"),
