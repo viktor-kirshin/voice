@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse
 
 from .diarization import diarize
 from .emotion import classify_segments
@@ -16,6 +16,12 @@ app = FastAPI(
     title="voiceai",
     version="0.1.0",
 )
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    """Корень → интерактивная документация (Swagger UI)."""
+    return RedirectResponse(url="/docs")
+
 
 @app.get("/health")
 def health() -> dict:
