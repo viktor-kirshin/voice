@@ -9,7 +9,6 @@ from .transcribe import Transcription
 
 @dataclass
 class AlignedSegment:
-    """Реплика после выравнивания: текст + его спикер."""
 
     start: float
     end: float
@@ -18,7 +17,7 @@ class AlignedSegment:
 
 
 def _ts(seconds: float) -> str:
-    """Секунды → HH:MM:SS.ss"""
+
     m, s = divmod(seconds, 60)
     h, m = divmod(int(m), 60)
     return f"{h:02d}:{int(m):02d}:{s:05.2f}"
@@ -29,7 +28,7 @@ def _overlap(a0: float, a1: float, b0: float, b1: float) -> float:
 
 
 def _best_speaker(start: float, end: float, turns: list[SpeakerTurn]) -> str | None:
-    """Спикер, чей интервал перекрывается с [start, end] сильнее всего."""
+
     best_speaker: str | None = None
     best_overlap = 0.0
     for turn in turns:
@@ -41,10 +40,10 @@ def _best_speaker(start: float, end: float, turns: list[SpeakerTurn]) -> str | N
 
 
 def _join_words(tokens: list[str]) -> str:
-    """Склеивает токены слов в текст с аккуратными пробелами/пунктуацией."""
+
     text = " ".join(t.strip() for t in tokens if t.strip())
-    text = re.sub(r"\s+([,.!?…:;%)\]»])", r"\1", text)   # пробел перед пунктуацией
-    text = re.sub(r"([(\[«])\s+", r"\1", text)            # пробел после открывающих
+    text = re.sub(r"\s+([,.!?…:;%)\]»])", r"\1", text)
+    text = re.sub(r"([(\[«])\s+", r"\1", text)
     return text.strip()
 
 
@@ -52,12 +51,7 @@ def align_speakers(
     transcription: Transcription,
     diarization: DiarizationResult | None = None,
 ) -> list[AlignedSegment]:
-    """Сопоставляет текст со спикерами.
 
-    Если есть пословные таймкоды — назначает спикера каждому слову и режет
-    реплики на смене говорящего (точнее). Иначе — посегментно, по максимальному
-    перекрытию.
-    """
     turns = diarization.turns if diarization else []
 
     if transcription.words and turns:
@@ -96,11 +90,6 @@ def build_result(
     segments: list[AlignedSegment],
     emotions: list[str | None] | None = None,
 ) -> dict:
-    """Структурированный результат (для JSON): реплики со спикерами и эмоциями.
-
-    `segments` — выровненные реплики (align_speakers), `emotions` — метки,
-    выровненные по ним.
-    """
     out = []
     for i, s in enumerate(segments):
         emotion = emotions[i] if emotions and i < len(emotions) else None
@@ -129,7 +118,6 @@ def build_text(
     segments: list[AlignedSegment],
     emotions: list[str | None] | None = None,
 ) -> str:
-    """Собирает читаемую расшифровку с таймкодами, спикерами и эмоциями."""
     lines: list[str] = []
     for s in build_result(transcription, segments, emotions)["segments"]:
         prefix = f"{s['speaker']}: " if s["speaker"] else ""

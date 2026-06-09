@@ -55,14 +55,9 @@ def transcribe(
     prompt: str | None = None,
     temperature: float = 0.0,
 ) -> Transcription:
-    """Распознаёт речь через OpenAI-совместимый endpoint vLLM.
 
-    prompt — подсказка Whisper (имена, термины) для меньшей путаницы слов.
-    Запрашивает пословные таймкоды; если сервер их не поддерживает —
-    откатывается на посегментные.
-    """
     base_url = base_url or os.environ.get("VOICEAI_BASE_URL", "http://localhost:8000/v1")
-    # vLLM не проверяет ключ, но клиент OpenAI требует непустую строку.
+
     api_key = api_key or os.environ.get("OPENAI_API_KEY") or "EMPTY"
     prompt = prompt if prompt is not None else os.environ.get("VOICEAI_PROMPT")
 
@@ -71,7 +66,6 @@ def transcribe(
     with open(audio_path, "rb") as f:
         file_tuple = (os.path.basename(audio_path), f.read())
 
-    # Пробуем с пословными таймкодами; если vLLM их не умеет — посегментно.
     try:
         resp = _create(client, model, file_tuple, language, temperature,
                        ["segment", "word"], prompt)

@@ -20,11 +20,7 @@ class DiarizationResult:
     speakers: list[str]
     turns: list[SpeakerTurn] = field(default_factory=list)
 
-
-# Модель диаризации. community-1 новее и точнее 3.1, особенно на телефонии.
-# Переопределяется переменной VOICEAI_DIARIZATION_MODEL (напр. вернуть 3.1).
 _DEFAULT_MODEL = "pyannote/speaker-diarization-community-1"
-
 
 def load_pipeline(
     device: str = "auto",

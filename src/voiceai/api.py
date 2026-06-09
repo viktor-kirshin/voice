@@ -75,9 +75,7 @@ def transcribe_endpoint(
             ) from e
 
         try:
-            # декодируем аудио один раз и переиспользуем для диаризации и эмоций
             waveform, sr = load_waveform(tmp_path)
-            # пайплайн pyannote прогрет на старте (lifespan) — переиспользуем
             with _diarization_lock:
                 diarization = run_diarization(
                     request.app.state.diarization_pipeline,
@@ -91,10 +89,8 @@ def transcribe_endpoint(
                 detail=f"Ошибка диаризации ({type(e).__name__}): {e}",
             ) from e
 
-        # выравниваем текст со спикерами (по словам, если есть пословные таймкоды)
         segments = align_speakers(result, diarization)
 
-        # эмоции считаем по итоговым репликам; при сбое — просто без них
         emotions = None
         if detect_emotions:
             try:
@@ -112,7 +108,7 @@ def run() -> None:
     uvicorn.run(
         "voiceai.api:app",
         host=os.environ.get("VOICEAI_HOST", "0.0.0.0"),
-        port=int(os.environ.get("VOICEAI_PORT", "8080")),
+        port=int(os.environ.get("VOICEAI_PORT", "1234")),
     )
 
 if __name__ == "__main__":

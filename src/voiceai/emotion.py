@@ -11,8 +11,8 @@ from .transcribe import Segment
 
 _DEFAULT_MODEL = "Aniemore/wavlm-emotion-russian-resd"
 _SR = 16000
-_MIN_SECONDS = 0.3   # слишком короткие куски не классифицируем
-_MAX_SECONDS = 30.0  # ограничиваем длину одного куска, чтобы не словить OOM
+_MIN_SECONDS = 0.3
+_MAX_SECONDS = 30.0
 
 _cache: dict = {}
 
@@ -23,8 +23,6 @@ def _get_model(model_name: str, device: str):
         try:
             extractor = AutoFeatureExtractor.from_pretrained(model_name)
         except Exception:
-            # некоторые репозитории не содержат preprocessor_config — берём
-            # стандартный экстрактор wav2vec2/wavlm (16 кГц).
             extractor = Wav2Vec2FeatureExtractor(
                 sampling_rate=_SR, do_normalize=True, return_attention_mask=True
             )
@@ -34,7 +32,6 @@ def _get_model(model_name: str, device: str):
         model.eval()
         _cache[key] = (model, extractor)
     return _cache[key]
-
 
 def classify_segments(
     waveform,
