@@ -21,7 +21,16 @@ class DiarizationResult:
     turns: list[SpeakerTurn] = field(default_factory=list)
 
 
-def load_pipeline(device: str = "auto", hf_token: str | None = None):
+# Модель диаризации. community-1 новее и точнее 3.1, особенно на телефонии.
+# Переопределяется переменной VOICEAI_DIARIZATION_MODEL (напр. вернуть 3.1).
+_DEFAULT_MODEL = "pyannote/speaker-diarization-community-1"
+
+
+def load_pipeline(
+    device: str = "auto",
+    hf_token: str | None = None,
+    model: str | None = None,
+):
 
     token = hf_token or os.environ.get("HF_TOKEN") or get_token()
     if not token:
@@ -30,9 +39,8 @@ def load_pipeline(device: str = "auto", hf_token: str | None = None):
             "либо задайте переменную окружения HF_TOKEN."
         )
 
-    pipeline = Pipeline.from_pretrained(
-        "pyannote/speaker-diarization-3.1", token=token
-    )
+    model = model or os.environ.get("VOICEAI_DIARIZATION_MODEL", _DEFAULT_MODEL)
+    pipeline = Pipeline.from_pretrained(model, token=token)
 
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"

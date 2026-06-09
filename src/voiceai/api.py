@@ -13,7 +13,7 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 from .audio import load_waveform
 from .diarization import load_pipeline, run_diarization
 from .emotion import classify_segments
-from .output import build_result, build_text
+from .output import align_speakers, build_result, build_text
 from .transcribe import transcribe
 
 _diarization_lock = threading.Lock()
@@ -50,7 +50,8 @@ def transcribe_endpoint(
     file: UploadFile = File(..., description="аудиофайл с записью разговора"),
     base_url: str | None = Form(None, description="URL OpenAI-совместимого endpoint vLLM"),
     num_speakers: int = Form(2, description="ожидаемое число спикеров"),
-    detect_emotions: bool = Form(True, description="определять эмоции по сегментам"),
+    prompt: str | None = Form(None, description="подсказка Whisper: имена/термины для точности"),
+    detect_emotions: bool = Form(True, description="определять эмоции по репликам"),
     response_format: str = Form("json", description="формат ответа: json или txt"),
 ):
     if response_format not in ("json", "txt"):
@@ -65,7 +66,8 @@ def transcribe_endpoint(
 
     try:
         try:
-            result = transcribe(tmp_path, language="ru", base_url=base_url)
+            result = transcribe(tmp_path, language="ru", base_url=base_url,
+                                prompt=prompt)
         except Exception as e:  # ошибки обращения к vLLM-серверу
             raise HTTPException(
                 status_code=502,
@@ -89,17 +91,20 @@ def transcribe_endpoint(
                 detail=f"Ошибка диаризации ({type(e).__name__}): {e}",
             ) from e
 
+        # выравниваем текст со спикерами (по словам, если есть пословные таймкоды)
+        segments = align_speakers(result, diarization)
 
+        # эмоции считаем по итоговым репликам; при сбое — просто без них
         emotions = None
         if detect_emotions:
             try:
-                emotions = classify_segments(waveform, sr, result.segments)
+                emotions = classify_segments(waveform, sr, segments)
             except Exception:
                 emotions = None
 
         if response_format == "txt":
-            return PlainTextResponse(build_text(result, diarization, emotions))
-        return build_result(result, diarization, emotions)
+            return PlainTextResponse(build_text(result, segments, emotions))
+        return build_result(result, segments, emotions)
     finally:
         os.unlink(tmp_path)
 
