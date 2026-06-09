@@ -1,31 +1,19 @@
-# vLLM с моделью Whisper, поднимает OpenAI-совместимый HTTP API.
-# Требует Linux-хост с NVIDIA GPU и установленным nvidia-container-toolkit.
-# (На macOS/Apple Silicon vLLM не работает — это сервер, к которому
-#  сервис voiceai ходит к нему по сети через base_url.)
-#
-# Запуск:   HF_TOKEN=hf_... docker compose -f docker/docker-compose.yml up
-# Проверка: curl http://localhost:8000/v1/models
-
 services:
   whisper-vllm:
     image: vllm/vllm-openai:latest
     container_name: whisper-vllm
+    entrypoint: ["/bin/bash", "-c"]
     command:
-      - --model
-      - openai/whisper-large-v3
-      - --task
-      - transcription
-      - --served-model-name
-      - openai/whisper-large-v3
+      - >-
+        pip install 'vllm[audio]' &&
+        vllm serve openai/whisper-large-v3
     ports:
       - "8000:8000"
     environment:
-      # Токен нужен только для gated-моделей; whisper-large-v3 публичный.
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
     volumes:
-      # Кэш весов между перезапусками (модель не качается заново).
       - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface
-    ipc: host  # vLLM использует разделяемую память между воркерами
+    ipc: host
     deploy:
       resources:
         reservations:
@@ -39,4 +27,4 @@ services:
       interval: 30s
       timeout: 5s
       retries: 10
-      start_period: 300s  # первый старт долгий — качаются веса модели
+      start_period: 300s
