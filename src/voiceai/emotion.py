@@ -1,75 +1,39 @@
-from __future__ import annotations
-import os
 import torch
-from transformers import (
-    AutoFeatureExtractor,
-    AutoModelForAudioClassification,
-    Wav2Vec2FeatureExtractor,
-)
+import torch.nn.functional as F
+import torchaudio
+from transformers import AutoConfig, AutoModel, Wav2Vec2FeatureExtractor
 
-from .transcribe import Segment
+MODEL_PATH = "Aniemore/wav2vec2-xlsr-53-russian-emotion-recognition"
+config = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True)
+model = AutoModel.from_pretrained(MODEL_PATH, trust_remote_code=True)
+feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_PATH)
 
-_DEFAULT_MODEL = "Aniemore/wavlm-emotion-russian-resd"
-_SR = 16000
-_MIN_SECONDS = 0.3
-_MAX_SECONDS = 30.0
+device = torch.device("cuda" if torch.cuda.is_available() else "mps")
+model.to(device)
+model.eval()
 
-_cache: dict = {}
+def speech_file_to_array(path, sampling_rate=16000):
+    speech_array, sr = torchaudio.load(path)
+    resampler = torchaudio.transforms.Resample(sr, sampling_rate)
+    speech = resampler(speech_array).squeeze().numpy()
+    return speech
 
 
-def _get_model(model_name: str, device: str):
-    key = (model_name, device)
-    if key not in _cache:
-        try:
-            extractor = AutoFeatureExtractor.from_pretrained(model_name)
-        except Exception:
-            extractor = Wav2Vec2FeatureExtractor(
-                sampling_rate=_SR, do_normalize=True, return_attention_mask=True
-            )
+def predict(path, sampling_rate=16000):
+    speech = speech_file_to_array(path, sampling_rate)
+    inputs = feature_extractor(speech, sampling_rate=sampling_rate,
+                               return_tensors="pt", padding=True)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
 
-        model = AutoModelForAudioClassification.from_pretrained(model_name)
-        model.to(device)
-        model.eval()
-        _cache[key] = (model, extractor)
-    return _cache[key]
+    with torch.no_grad():
+        logits = model(**inputs).logits
 
-def classify_segments(
-    waveform,
-    sample_rate: int,
-    segments: list[Segment],
-    model_name: str | None = None,
-    device: str | None = None,
-) -> list[str | None]:
+    scores = F.softmax(logits, dim=1).detach().cpu().numpy()[0]
+    results = [
+        {"Emotion": config.id2label[i], "Score": f"{round(score * 100, 3):.1f}%"}
+        for i, score in enumerate(scores)
+    ]
+    return results
 
-    if not segments:
-        return []
-
-    model_name = model_name or os.environ.get("VOICEAI_EMOTION_MODEL", _DEFAULT_MODEL)
-    device = device or os.environ.get("VOICEAI_DEVICE", "auto")
-    if device == "auto":
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    model, extractor = _get_model(model_name, device)
-
-    samples = waveform[0]
-    total = samples.shape[0]
-    min_len = int(_MIN_SECONDS * sample_rate)
-    max_len = int(_MAX_SECONDS * sample_rate)
-
-    labels: list[str | None] = []
-    for seg in segments:
-        a = max(0, int(seg.start * sample_rate))
-        b = min(total, int(seg.end * sample_rate))
-        chunk = samples[a : min(b, a + max_len)]
-        if chunk.shape[0] < min_len:
-            labels.append(None)
-            continue
-
-        inputs = extractor(chunk.numpy(), sampling_rate=sample_rate, return_tensors="pt")
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        with torch.no_grad():
-            logits = model(**inputs).logits
-        idx = int(logits.softmax(dim=-1).argmax(dim=-1).item())
-        labels.append(model.config.id2label[idx])
-
-    return labels
+result = predict("1.waw", 16000)
+print(result)
