@@ -8,7 +8,7 @@ config = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True)
 model = AutoModel.from_pretrained(MODEL_PATH, trust_remote_code=True)
 feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_PATH)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "mps")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 model.eval()
 
