@@ -1,26 +1,30 @@
 import torch
 import torch.nn.functional as F
 import torchaudio
-from transformers import AutoConfig, Wav2Vec2FeatureExtractor
-from transformers import AutoModel
+from transformers import Wav2Vec2FeatureExtractor
+from transformers.dynamic_module_utils import get_class_from_dynamic_module
+from huggingface_hub import snapshot_download
 
 MODEL_PATH = "Aniemore/wav2vec2-xlsr-53-russian-emotion-recognition"
 
-config = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True)
+local_path = snapshot_download(MODEL_PATH)
 
-model = AutoModel.from_pretrained(
-    MODEL_PATH,
-    config=config,
-    trust_remote_code=True,
-    ignore_mismatched_sizes=True
+config_class = get_class_from_dynamic_module(
+    "wav2vec2fsr_config.W2V2FSRConfig",
+    local_path
+)
+model_class = get_class_from_dynamic_module(
+    "wav2vec2speechclassification.Wav2Vec2ForSpeechClassification",
+    local_path
 )
 
-feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_PATH)
+config = config_class.from_pretrained(local_path)
+model = model_class.from_pretrained(local_path, config=config)
+feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(local_path)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 model.eval()
-
 
 def speech_file_to_array(path, sampling_rate=16000):
     speech_array, sr = torchaudio.load(path)
