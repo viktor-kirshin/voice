@@ -5,6 +5,8 @@ from transformers import Wav2Vec2FeatureExtractor
 from transformers.dynamic_module_utils import get_class_from_dynamic_module
 from huggingface_hub import snapshot_download
 
+if torch.cuda.is_available():
+    torch.cuda.set_per_process_memory_fraction(0.15, device=0)
 MODEL_PATH = "Aniemore/wav2vec2-xlsr-53-russian-emotion-recognition"
 
 local_path = snapshot_download(MODEL_PATH)
