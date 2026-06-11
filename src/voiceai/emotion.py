@@ -52,5 +52,5 @@ def predict(path, sampling_rate=16000):
     ]
     return sorted(results, key=lambda x: float(x["score"][:-1]), reverse=True)
 
-result = predict("1.waw", 16000)
+result = predict(voice/"1.wav", 16000)
 print(result)
