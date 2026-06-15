@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
 from contextlib import asynccontextmanager
@@ -12,6 +13,8 @@ from fastapi.responses import RedirectResponse
 from .emotion import load_model, predict_emotion
 from .output import build_result
 from .transcribe import transcribe
+
+logger = logging.getLogger("voiceai")
 
 
 @asynccontextmanager
@@ -76,6 +79,7 @@ def transcribe_endpoint(
                 feature_extractor, model = request.app.state.emotion
                 emotion = predict_emotion(tmp_path, feature_extractor, model)
             except Exception:
+                logger.exception("Не удалось определить эмоцию")
                 emotion = None
 
         return build_result(result, emotion)
