@@ -24,7 +24,7 @@ class Transcription:
 
 def transcribe(
     audio_path: str,
-    model: str = "openai/whisper-large-v3",
+    model: str = "openai/whisper-large-v3-turbo",
     language: str | None = None,
     base_url: str | None = None,
     api_key: str | None = None,
