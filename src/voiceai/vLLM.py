@@ -1,25 +1,23 @@
-from openai import OpenAI
-from elplatai.config import VLLM_BASE_URL, VLLM_API_KEY
+from typing import Literal
+from pydantic import BaseModel, Field
+from elplatai.clients.vllm_client import get_transcription_vllm
 
-client = OpenAI(base_url=VLLM_BASE_URL, api_key=VLLM_API_KEY or "EMPTY")
+
+class AskWhisperAction(BaseModel):
+    action: Literal["ask_whisper"]
+    audio_path: str = Field(min_length=1)
+    language: str = "ru"
+    response_format: Literal["json", "verbose_json", "text", "srt", "vtt"] = "verbose_json"
+    model: str = "openai/whisper-large-v3"
+    timestamp_granularities: list[Literal["segment", "word"]] | None = None
 
 
-def get_transcription_vllm(
-    audio_path: str,
-    language: str = "ru",
-    response_format: str = "verbose_json",
-    model: str = "openai/whisper-large-v3",
-    timestamp_granularities: list[str] | None = None,
-) -> dict:
-    with open(audio_path, "rb") as f:
-        transcription = client.audio.transcriptions.create(
-            file=f,
-            model=model,
-            language=language,
-            response_format=response_format,
-            timestamp_granularities=timestamp_granularities or ["segment"],
-        )
-    return {
-        "text": transcription.text,
-        "segments": transcription.segments,
+def ask_whisper(request: AskWhisperAction) -> dict:
+    kwargs = {
+        "audio_path": request.audio_path,
+        "language": request.language,
+        "response_format": request.response_format,
+        "model": request.model,
+        "timestamp_granularities": request.timestamp_granularities,
     }
+    return get_transcription_vllm(**kwargs)
