@@ -1,7 +1,7 @@
 [project]
 name = "dir1"
 version = "0.1.0"
-description = "FastAPI-сервис транскрибации диалогов: Whisper (vLLM) + диаризация спикеров"
+description = "FastAPI-сервис транскрибации диалогов: Whisper (vLLM) + эмоции речи"
 readme = "README.md"
 authors = [
     { name = "viktor-kirshin" }
@@ -10,8 +10,8 @@ requires-python = "==3.13.*"
 dependencies = [
     "fastapi>=0.136.3",
     "openai>=2.40.0",
-    "pyannote.audio>=4.0",
     "python-multipart>=0.0.30",
+    "torch>=2.12.0",
     "transformers==4.35.2",
     "uvicorn[standard]>=0.48.0",
 ]
