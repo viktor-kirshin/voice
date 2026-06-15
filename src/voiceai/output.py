@@ -12,39 +12,24 @@ def _ts(seconds: float) -> str:
 
 def build_result(
     transcription: Transcription,
-    emotions: list[str | None] | None = None,
+    emotion: str | None = None,
+    emotion_scores: dict[str, float] | None = None,
 ) -> dict:
-    """Структурированный результат (для JSON): сегменты с таймкодами и эмоциями.
-
-    `emotions` — список меток, выровненный по `transcription.segments`.
-    """
-    out = []
-    for i, seg in enumerate(transcription.segments):
-        emotion = emotions[i] if emotions and i < len(emotions) else None
-        out.append(
-            {
-                "start": round(seg.start, 2),
-                "end": round(seg.end, 2),
-                "start_ts": _ts(seg.start),
-                "end_ts": _ts(seg.end),
-                "emotion": emotion,
-                "text": seg.text,
-            }
-        )
+    """Единый JSON: язык, длительность, эмоция всей записи и сегменты текста."""
+    segments = [
+        {
+            "start": round(seg.start, 2),
+            "end": round(seg.end, 2),
+            "start_ts": _ts(seg.start),
+            "end_ts": _ts(seg.end),
+            "text": seg.text,
+        }
+        for seg in transcription.segments
+    ]
     return {
         "language": transcription.language,
         "duration": round(transcription.duration, 2),
-        "segments": out,
+        "emotion": emotion,
+        "emotion_scores": emotion_scores,
+        "segments": segments,
     }
-
-
-def build_text(
-    transcription: Transcription,
-    emotions: list[str | None] | None = None,
-) -> str:
-    """Собирает читаемую расшифровку с таймкодами и эмоциями."""
-    lines: list[str] = []
-    for s in build_result(transcription, emotions)["segments"]:
-        emo = f"  ({s['emotion']})" if s["emotion"] else ""
-        lines.append(f"[{s['start_ts']} → {s['end_ts']}] {s['text']}{emo}")
-    return "\n".join(lines)

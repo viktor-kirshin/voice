@@ -2,15 +2,15 @@
 
 Здесь поднимается отдельный сервис: модель **Whisper** крутится внутри
 **vLLM** в Docker-контейнере и отдаёт **OpenAI-совместимый HTTP API**.
-Сервис `voiceai` обращается к нему по сети (поле `base_url`), а диаризацию
-(pyannote) и склейку делает у себя.
+Сервис `voiceai` обращается к нему по сети (поле `base_url`) за распознаванием
+речи, а эмоцию записи считает у себя.
 
 ```
-┌──────────────────────────┐         HTTP (OpenAI API)        ┌────────────────────────────┐
-│  клиент voiceai (CPU/Mac)│  ── POST /v1/audio/transcriptions ─► │  Docker: vLLM + Whisper (GPU)│
-│  • pyannote (диаризация) │  ◄── verbose_json: segments ────  │  • openai/whisper-large-v3   │
-│  • выравнивание + вывод   │                                   │  • endpoint :8000/v1          │
-└──────────────────────────┘                                   └────────────────────────────┘
+┌──────────────────────────┐         HTTP (OpenAI API)            ┌────────────────────────────┐
+│  сервис voiceai          │  ── POST /v1/audio/transcriptions ─► │  Docker: vLLM + Whisper (GPU)│
+│  • эмоция записи (HuBERT) │  ◄── verbose_json: segments ────     │  • openai/whisper-large-v3   │
+│  • сборка JSON            │                                      │  • endpoint :8000/v1          │
+└──────────────────────────┘                                      └────────────────────────────┘
 ```
 
 ## Требования
@@ -61,8 +61,7 @@ curl -X POST http://localhost:8080/transcribe \
 
 - vLLM не проверяет API-ключ; сервис шлёт `EMPTY` по умолчанию. Если перед
   vLLM стоит прокси с авторизацией — задайте поле `api_key` или `OPENAI_API_KEY`.
-- Для выравнивания со спикерами нужен `verbose_json` с посегментными
-  таймкодами (`timestamp_granularities=[segment]`). Клиент запрашивает их сам;
-  убедитесь, что версия vLLM их поддерживает.
-- Сменить модель — отредактируйте `--model`/`--served-model-name` в
-  `docker-compose.yml` (напр. `openai/whisper-large-v3-turbo`).
+- Сервис запрашивает `verbose_json` с посегментными таймкодами — vLLM
+  возвращает сегменты `start/end/text`, как и облачный OpenAI.
+- Сменить модель — отредактируйте команду `vllm serve` в `docker-compose.yml`
+  (напр. `openai/whisper-large-v3-turbo`).
