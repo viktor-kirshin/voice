@@ -13,7 +13,6 @@ def _ts(seconds: float) -> str:
 def build_result(
     transcription: Transcription,
     emotion: str | None = None,
-    emotion_scores: dict[str, float] | None = None,
 ) -> dict:
     """Единый JSON: язык, длительность, эмоция всей записи и сегменты текста."""
     segments = [
@@ -30,6 +29,5 @@ def build_result(
         "language": transcription.language,
         "duration": round(transcription.duration, 2),
         "emotion": emotion,
-        "emotion_scores": emotion_scores,
         "segments": segments,
     }

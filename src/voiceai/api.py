@@ -9,7 +9,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
 
-from .emotion import load_emotion_model
+from .emotion import load_model, predict_emotion
 from .output import build_result
 from .transcribe import transcribe
 
@@ -18,14 +18,13 @@ from .transcribe import transcribe
 async def lifespan(app: FastAPI):
     """Прогрев модели эмоций один раз при старте сервера.
 
-    Грузится здесь и переиспользуется всеми запросами (в app.state). Если веса
-    не скачались — сервис падает сразу на старте (fail-fast), а не отдаёт 500
-    в середине обработки.
+    feature extractor и модель грузятся здесь и переиспользуются всеми
+    запросами (в app.state). Если веса не скачались — сервис падает сразу
+    на старте (fail-fast), а не отдаёт 500 в середине обработки.
     """
-    device = os.environ.get("VOICEAI_DEVICE")
-    app.state.emotion_model = load_emotion_model(device)
+    app.state.emotion = load_model()  # (feature_extractor, model)
     yield
-    app.state.emotion_model = None
+    app.state.emotion = None
 
 
 app = FastAPI(
@@ -71,14 +70,15 @@ def transcribe_endpoint(
             ) from e
 
         # эмоция необязательна: при сбое не валим запрос, просто без неё
-        emotion, scores = None, None
+        emotion = None
         if detect_emotions:
             try:
-                emotion, scores = request.app.state.emotion_model.predict(tmp_path)
+                feature_extractor, model = request.app.state.emotion
+                emotion = predict_emotion(tmp_path, feature_extractor, model)
             except Exception:
-                emotion, scores = None, None
+                emotion = None
 
-        return build_result(result, emotion, scores)
+        return build_result(result, emotion)
     finally:
         os.unlink(tmp_path)
 
