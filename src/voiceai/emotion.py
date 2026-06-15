@@ -15,11 +15,13 @@ def load_model():
 def predict_emotion(filepath, feature_extractor, model):
     """Эмоция всей записи (метка из num2emotion)."""
     waveform, sample_rate = torchaudio.load(filepath, normalize=True)
+    if waveform.shape[0] > 1:  # стерео -> моно, иначе ломается форма входа
+        waveform = waveform.mean(dim=0, keepdim=True)
     transform = torchaudio.transforms.Resample(sample_rate, 16000)
     waveform = transform(waveform)
 
     inputs = feature_extractor(
-            waveform,
+            waveform.squeeze(0).numpy(),
             sampling_rate=feature_extractor.sampling_rate,
             return_tensors="pt",
             padding=True,
@@ -27,6 +29,6 @@ def predict_emotion(filepath, feature_extractor, model):
             truncation=True
         )
 
-    logits = model(inputs['input_values'][0]).logits
+    logits = model(inputs['input_values']).logits
     emotion = torch.argmax(logits, dim=-1)
     return num2emotion[emotion.numpy()[0]]
