@@ -24,7 +24,6 @@ class Transcription:
 
 def transcribe(
     audio_path: str,
-    model: str = "openai/whisper-large-v3",
     language: str | None = None,
     base_url: str | None = None,
     api_key: str | None = None,
@@ -34,11 +33,14 @@ def transcribe(
     """Распознаёт речь через OpenAI-совместимый endpoint vLLM.
 
     prompt — подсказка Whisper (имена, термины) для меньшей путаницы слов.
+    Имя модели берётся из VOICEAI_WHISPER_MODEL (должно совпадать с тем, что
+    vLLM показывает в /v1/models), иначе дефолт openai/whisper-large-v3.
     """
     base_url = base_url or os.environ.get("VOICEAI_BASE_URL", "http://localhost:8000/v1")
     # vLLM не проверяет ключ, но клиент OpenAI требует непустую строку.
     api_key = api_key or os.environ.get("OPENAI_API_KEY") or "EMPTY"
     prompt = prompt if prompt is not None else os.environ.get("VOICEAI_PROMPT")
+    model = model or os.environ.get("VOICEAI_WHISPER_MODEL", "openai/whisper-large-v3-turbo")
 
     client = OpenAI(base_url=base_url, api_key=api_key)
 
