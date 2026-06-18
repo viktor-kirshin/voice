@@ -24,6 +24,7 @@ class Transcription:
 
 def transcribe(
     audio_path: str,
+    model: str | None = None,
     language: str | None = None,
     base_url: str | None = None,
     api_key: str | None = None,
