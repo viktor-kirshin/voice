@@ -55,11 +55,29 @@ def transcribe(
     if prompt:
         kwargs["prompt"] = prompt
 
+    # Доп. параметры декодирования Whisper (через extra_body — в стандартном
+    # OpenAI-API их нет). Цель — чтобы Whisper не выбрасывал «сложные» куски
+    # (крик, ругань, телефония): не подавлять токены и ослабить пороги
+    # «тишина/галлюцинации», из-за которых сегменты режутся целиком.
+    extra_body = {
+        "suppress_tokens": [],            # ничего не подавлять
+        "condition_on_previous_text": False,  # не тянуть ошибки между окнами
+        "no_speech_threshold": 0.9,       # выше → реже считает «тишиной»
+        "logprob_threshold": -2.0,        # ниже → терпимее к низкой уверенности
+        "compression_ratio_threshold": 3.0,  # выше → реже считает «галлюцинацией»
+    }
+
     with open(audio_path, "rb") as f:
+        file_tuple = (os.path.basename(audio_path), f.read())
+
+    try:
         resp = client.audio.transcriptions.create(
-            file=f,
-            extra_body={"suppress_tokens": []},
-            **kwargs,
+            file=file_tuple, extra_body=extra_body, **kwargs
+        )
+    except Exception:
+        # vLLM не принял доп. поля — повторяем с минимальным набором
+        resp = client.audio.transcriptions.create(
+            file=file_tuple, extra_body={"suppress_tokens": []}, **kwargs
         )
 
     raw_segments = getattr(resp, "segments", None) or []
