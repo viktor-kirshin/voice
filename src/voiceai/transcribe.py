@@ -41,7 +41,7 @@ def transcribe(
     # vLLM не проверяет ключ, но клиент OpenAI требует непустую строку.
     api_key = api_key or os.environ.get("OPENAI_API_KEY") or "EMPTY"
     prompt = prompt if prompt is not None else os.environ.get("VOICEAI_PROMPT")
-    model = model or os.environ.get("VOICEAI_WHISPER_MODEL", "openai/whisper-large-v3")
+    model = model or os.environ.get("VOICEAI_WHISPER_MODEL", "/models/whisper-large-v3")
 
     client = OpenAI(base_url=base_url, api_key=api_key)
 
