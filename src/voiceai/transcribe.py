@@ -56,7 +56,11 @@ def transcribe(
         kwargs["prompt"] = prompt
 
     with open(audio_path, "rb") as f:
-        resp = client.audio.transcriptions.create(file=f, **kwargs)
+        resp = client.audio.transcriptions.create(
+            file=f,
+            extra_body={"suppress_tokens": []},
+            **kwargs,
+        )
 
     raw_segments = getattr(resp, "segments", None) or []
     segments = [
