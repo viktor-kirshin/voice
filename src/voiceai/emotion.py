@@ -2,7 +2,7 @@ from transformers import HubertForSequenceClassification, Wav2Vec2FeatureExtract
 import torchaudio
 import torch
 
-num2emotion = {0: 'neutral', 1: 'angry', 2: 'positive'}
+num2emotion = {0: 'neutral', 1: 'angry', 2: 'positive', 3: 'sad', 4: 'other'}
 
 
 def load_model():
